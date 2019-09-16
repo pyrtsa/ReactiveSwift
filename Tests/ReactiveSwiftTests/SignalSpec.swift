@@ -262,7 +262,7 @@ class SignalSpec: QuickSpec {
 		describe("interruption") {
 			it("should not send events after sending an interrupted event") {
 				let queue: DispatchQueue
-				let counter = Atomic<Int>(0)
+				var counter = Atomic<Int>(0)
 
 				if #available(macOS 10.10, *) {
 					queue = DispatchQueue.global(qos: .userInitiated)
@@ -311,8 +311,8 @@ class SignalSpec: QuickSpec {
 
 			it("should interrupt concurrently") {
 				let queue: DispatchQueue
-				let counter = Atomic<Int>(0)
-				let executionCounter = Atomic<Int>(0)
+				var counter = Atomic<Int>(0)
+				var executionCounter = Atomic<Int>(0)
 
 				if #available(macOS 10.10, *) {
 					queue = DispatchQueue.global(qos: .userInitiated)

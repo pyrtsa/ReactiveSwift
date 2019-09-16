@@ -213,9 +213,20 @@ internal class Lock {
 }
 
 /// An atomic variable.
-public final class Atomic<Value> {
-	private let lock: Lock
-	private var _value: Value
+private final class _Atomic<Value> {
+	fileprivate let lock: Lock
+	fileprivate var value: Value
+
+	init(_ value: Value) {
+		self.lock = Lock.make()
+		self.value = value
+	}
+}
+
+/// An atomic variable.
+@propertyWrapper
+public struct Atomic<Value> {
+	private let _ref: _Atomic<Value>
 
 	/// Atomically get or set the value of the variable.
 	public var value: Value {
@@ -223,8 +234,34 @@ public final class Atomic<Value> {
 			return withValue { $0 }
 		}
 
-		set(newValue) {
-			swap(newValue)
+		_modify {
+			print("_modify value")
+			_ref.lock.lock()
+			defer { _ref.lock.unlock() }
+
+			yield &_ref.value
+		}
+	}
+
+	public var wrappedValue: Value {
+		get {
+			value
+		}
+
+		_modify {
+			print("_modify wrappedValue")
+			yield &value
+		}
+	}
+
+	public var projectedValue: Atomic<Value> {
+		get {
+			self
+		}
+
+		_modify {
+			print("_modify projectedValue")
+			yield &self
 		}
 	}
 
@@ -233,8 +270,11 @@ public final class Atomic<Value> {
 	/// - parameters:
 	///   - value: Initial value for `self`.
 	public init(_ value: Value) {
-		_value = value
-		lock = Lock.make()
+		_ref = _Atomic(value)
+	}
+
+	public init(wrappedValue: Value) {
+		self = Atomic(wrappedValue)
 	}
 
 	/// Atomically modifies the variable.
@@ -244,11 +284,11 @@ public final class Atomic<Value> {
 	///
 	/// - returns: The result of the action.
 	@discardableResult
-	public func modify<Result>(_ action: (inout Value) throws -> Result) rethrows -> Result {
-		lock.lock()
-		defer { lock.unlock() }
+	public mutating func modify<Result>(_ action: (inout Value) throws -> Result) rethrows -> Result {
+		_ref.lock.lock()
+		defer { _ref.lock.unlock() }
 
-		return try action(&_value)
+		return try action(&_ref.value)
 	}
 
 	/// Atomically perform an arbitrary action using the current value of the
@@ -260,10 +300,10 @@ public final class Atomic<Value> {
 	/// - returns: The result of the action.
 	@discardableResult
 	public func withValue<Result>(_ action: (Value) throws -> Result) rethrows -> Result {
-		lock.lock()
-		defer { lock.unlock() }
+		_ref.lock.lock()
+		defer { _ref.lock.unlock() }
 
-		return try action(_value)
+		return try action(_ref.value)
 	}
 
 	/// Atomically replace the contents of the variable.
@@ -273,7 +313,7 @@ public final class Atomic<Value> {
 	///
 	/// - returns: The old value.
 	@discardableResult
-	public func swap(_ newValue: Value) -> Value {
+	public mutating func swap(_ newValue: Value) -> Value {
 		return modify { (value: inout Value) in
 			let oldValue = value
 			value = newValue

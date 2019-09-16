@@ -1057,7 +1057,7 @@ class SignalProducerSpec: QuickSpec {
 					return SignalProducer(value: ())
 				}
 				
-				waitUntil { done in
+				waitUntil(timeout: 3) { done in
 					SignalProducer
 						.zip(producers)
 						.start(on: scheduler)

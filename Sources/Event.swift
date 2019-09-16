@@ -751,7 +751,7 @@ extension Signal.Event {
 
 	internal static func lazyMap<U>(on scheduler: Scheduler, transform: @escaping (Value) -> U) -> Transformation<U, Error> {
 		return { action, lifetime in
-			let box = Atomic<Value?>(nil)
+			var box = Atomic<Value?>(nil)
 			let completionDisposable = SerialDisposable()
 			let valueDisposable = SerialDisposable()
 
@@ -829,7 +829,7 @@ extension Signal.Event {
 		precondition(interval >= 0)
 
 		return { action, lifetime in
-			let state: Atomic<ThrottleState<Value>> = Atomic(ThrottleState())
+			var state: Atomic<ThrottleState<Value>> = Atomic(ThrottleState())
 			let schedulerDisposable = SerialDisposable()
 
 			lifetime.observeEnded {
@@ -870,7 +870,7 @@ extension Signal.Event {
 	internal static func debounce(_ interval: TimeInterval, on scheduler: DateScheduler, discardWhenCompleted: Bool) -> Transformation<Value, Error> {
 		precondition(interval >= 0)
 		
-		let state: Atomic<ThrottleState<Value>> = Atomic(ThrottleState(previousDate: scheduler.currentDate, pendingValue: nil))
+		var state: Atomic<ThrottleState<Value>> = Atomic(ThrottleState(previousDate: scheduler.currentDate, pendingValue: nil))
 
 		return { action, lifetime in
 			let d = SerialDisposable()
@@ -921,7 +921,7 @@ extension Signal.Event {
 	
 	internal static func collect(every interval: DispatchTimeInterval, on scheduler: DateScheduler, skipEmpty: Bool, discardWhenCompleted: Bool) -> Transformation<[Value], Error> {
 		return { action, lifetime in
-			let state = Atomic<CollectEveryState<Value>>(.init(skipEmpty: skipEmpty))
+			var state = Atomic<CollectEveryState<Value>>(.init(skipEmpty: skipEmpty))
 			let d = SerialDisposable()
 			
 			d.inner = scheduler.schedule(after: scheduler.currentDate.addingTimeInterval(interval), interval: interval, leeway: interval * 0.1) {

@@ -2630,9 +2630,9 @@ extension SignalProducer {
 		let lifetimeToken = Lifetime.Token()
 		let lifetime = Lifetime(lifetimeToken)
 
-		let state = Atomic(ReplayState<Value, Error>(upTo: capacity))
+		var state = Atomic(ReplayState<Value, Error>(upTo: capacity))
 
-		let start: Atomic<(() -> Void)?> = Atomic {
+		var start: Atomic<(() -> Void)?> = Atomic({
 			// Start the underlying producer.
 			self
 				.take(during: lifetime)
@@ -2643,7 +2643,7 @@ extension SignalProducer {
 					}
 					observers?.forEach { $0.send(event) }
 				}
-		}
+		})
 
 		return SignalProducer { observer, lifetime in
 			// Don't dispose of the original producer until all observers

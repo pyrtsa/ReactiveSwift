@@ -1003,7 +1003,7 @@ extension Signal {
 	///            either input signal is interrupted.
 	public func sample<T>(with sampler: Signal<T, Never>) -> Signal<(Value, T), Error> {
 		return Signal<(Value, T), Error> { observer, lifetime in
-			let state = Atomic(SampleState<Value>())
+			var state = Atomic(SampleState<Value>())
 
 			lifetime += self.observe { event in
 				switch event {
@@ -1093,7 +1093,7 @@ extension Signal {
 	///            are ignored**.
 	public func withLatest<U>(from samplee: Signal<U, Never>) -> Signal<(Value, U), Error> {
 		return Signal<(Value, U), Error> { observer, lifetime in
-			let state = Atomic<U?>(nil)
+			var state = Atomic<U?>(nil)
 
 			lifetime += samplee.observeValues { value in
 				state.value = value
@@ -1493,7 +1493,7 @@ extension Signal {
 	{
 		return Signal { observer, lifetime in
 			let initial: ThrottleWhileState<Value> = .resumed
-			let state = Atomic(initial)
+			var state = Atomic(initial)
 			let schedulerDisposable = SerialDisposable()
 			lifetime += schedulerDisposable
 
@@ -1688,7 +1688,7 @@ extension Signal {
 		private let count: Int
 		private let lock: Lock
 
-		private let completion: Atomic<Int>
+		private var completion: Atomic<Int>
 		private let action: (AggregateStrategyEvent) -> Void
 
 		func update(_ value: Any, at position: Int) {

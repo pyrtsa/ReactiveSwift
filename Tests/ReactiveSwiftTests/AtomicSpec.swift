@@ -40,5 +40,15 @@ class AtomicSpec: QuickSpec {
 			expect(result) == true
 			expect(atomic.value) == 1
 		}
+
+		it("should work as a property wrapper") {
+			struct Foo {
+				@Atomic
+				static fileprivate(set) var bar: [Int] = []
+			}
+			Foo.bar.append(1)
+			Foo.$bar.withValue { $0 + [2] }
+			expect(Foo.bar) == [1]
+		}
 	}
 }

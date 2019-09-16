@@ -292,7 +292,7 @@ extension Signal where Value: SignalProducerConvertible, Error == Value.Error {
 	}
 
 	fileprivate func observeConcurrent(_ observer: Signal<Value.Value, Error>.Observer, _ limit: UInt, _ lifetime: Lifetime) -> Disposable? {
-		let state = Atomic(ConcurrentFlattenState<Value.Value, Error>(limit: limit))
+		var state = Atomic(ConcurrentFlattenState<Value.Value, Error>(limit: limit))
 
 		func startNextIfNeeded() {
 			while let producer = state.modify({ $0.dequeue() }) {
@@ -599,7 +599,7 @@ extension Signal where Value: SignalProducerConvertible, Error == Value.Error {
 	}
 
 	fileprivate func observeSwitchToLatest(_ observer: Signal<Value.Value, Error>.Observer, _ latestInnerDisposable: SerialDisposable) -> Disposable? {
-		let state = Atomic(LatestState<Value, Error>())
+		var state = Atomic(LatestState<Value, Error>())
 
 		return self.observe { event in
 			switch event {
@@ -717,7 +717,7 @@ extension Signal where Value: SignalProducerConvertible, Error == Value.Error {
 	}
 
 	fileprivate func observeRace(_ observer: Signal<Value.Value, Error>.Observer, _ relayDisposable: CompositeDisposable) -> Disposable? {
-		let state = Atomic(RaceState())
+		var state = Atomic(RaceState())
 
 		return self.observe { event in
 			switch event {

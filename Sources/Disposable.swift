@@ -124,7 +124,7 @@ public final class AnyDisposable: Disposable {
 
 /// A disposable that will dispose of any number of other disposables.
 public final class CompositeDisposable: Disposable {
-	private let disposables: Atomic<Bag<Disposable>?>
+	private var disposables: Atomic<Bag<Disposable>?>
 	private var state: UnsafeAtomicState<DisposableState>
 
 	public var isDisposed: Bool {
@@ -333,7 +333,7 @@ extension ScopedDisposable where Inner == CompositeDisposable {
 /// A disposable that disposes of its wrapped disposable, and allows its
 /// wrapped disposable to be replaced.
 public final class SerialDisposable: Disposable {
-	private let _inner: Atomic<Disposable?>
+	private var _inner: Atomic<Disposable?>
 	private var state: UnsafeAtomicState<DisposableState>
 
 	public var isDisposed: Bool {

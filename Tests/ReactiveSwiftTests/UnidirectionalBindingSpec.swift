@@ -171,7 +171,7 @@ class UnidirectionalBindingSpec: QuickSpec {
 				let key = DispatchSpecificKey<Void>()
 				DispatchQueue.main.setSpecific(key: key, value: ())
 
-				let mainQueueCounter = Atomic(0)
+				var mainQueueCounter = Atomic(0)
 
 				let setter: (Int) -> Void = {
 					value = $0
