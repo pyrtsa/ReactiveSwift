@@ -660,7 +660,15 @@ public final class MutableProperty<Value>: ComposableMutablePropertyProtocol {
 	/// signals created using `producer`.
 	public var value: Value {
 		get { return box.value }
-		set { modify { $0 = newValue } }
+		_modify {
+			defer { observer.send(value: box._value) }
+			box.lock.lock()
+			defer { box.lock.unlock() }
+			guard !box.isModifying else { fatalError("Nested modifications violate exclusivity of access.") }
+			box.isModifying = true
+			defer { box.isModifying = false }
+			yield &box._value
+		}
 	}
 
 	/// The lifetime of the property.
@@ -779,7 +787,7 @@ internal struct PropertyStorage<Value> {
 /// implementation sharing with `MutableProperty`.
 private final class PropertyBox<Value> {
 
-	private let lock: Lock.PthreadLock
+	fileprivate let lock: Lock.PthreadLock
 	fileprivate var _value: Value
 	fileprivate var isModifying = false
 
