@@ -814,3 +814,68 @@ private final class PropertyBox<Value> {
 		return try action(PropertyStorage(self))
 	}
 }
+
+@propertyWrapper
+public struct Observable<Value> {
+	private let _ref: MutableProperty<Value>
+
+	public typealias Value = Value
+
+	public init(wrappedValue initial: Value) {
+		_ref = MutableProperty(initial)
+	}
+
+	public init(wrappedValue initial: Value, values: SignalProducer<Value, Never>) {
+		_ref = MutableProperty(initial)
+		_ref <~ values
+	}
+
+	public var wrappedValue: Value {
+		get { _ref.value }
+		_modify { yield &_ref.value }
+	}
+
+	public var projectedValue: Observable<Value> {
+		get { self }
+		_modify { yield &self }
+	}
+
+	public var lifetime: Lifetime { _ref.lifetime }
+	public var property: Property<Value> { Property(capturing: _ref) }
+	public var signal: Signal<Value, Never> { _ref.signal }
+	public var producer: SignalProducer<Value, Never> { _ref.producer }
+
+	public var bindingTarget: BindingTarget<Value> {
+		mutating get { _ref.bindingTarget }
+	}
+
+	public var mutableProperty: MutableProperty<Value> {
+		mutating get { _ref }
+	}
+
+	@discardableResult
+	public func withValue<Result>(_ action: (Value) throws -> Result) rethrows -> Result {
+		try _ref.withValue(action)
+	}
+
+	@discardableResult
+	public mutating func swap(_ newValue: Value) -> Value {
+		_ref.swap(newValue)
+	}
+
+	@discardableResult
+	public mutating func modify<Result>(_ action: (inout Value) throws -> Result) rethrows -> Result {
+		try mutableProperty.modify(action)
+	}
+
+	@discardableResult
+	public static func <~
+		<Source: BindingSource>
+		(observable: inout Observable<Value>, source: Source) -> Disposable?
+		where Source.Value == Value
+	{
+		return source.producer
+			.take(during: observable.bindingTarget.lifetime)
+			.startWithValues(observable.bindingTarget.action)
+	}
+}

@@ -20,8 +20,105 @@ private let initialOtherPropertyValue = "InitialOtherValue"
 private let subsequentOtherPropertyValue = "SubsequentOtherValue"
 private let finalOtherPropertyValue = "FinalOtherValue"
 
+private final class Example {
+	@Observable private(set) var counter: Int = 0
+	init() {}
+	init(observing values: SignalProducer<Int, Never>) {
+		$counter <~ values
+	}
+	func increment() { counter += 1 }
+	func reset() { counter = 0 }
+}
+
 class PropertySpec: QuickSpec {
 	override func spec() {
+		describe("Observable") {
+			it("should be usable as a property wrapper (1/2)") {
+				let example = Example()
+				var sentValue: Int?
+
+				example.$counter.producer.startWithValues { sentValue = $0 }
+				expect(sentValue) == 0
+				expect(example.counter) == 0
+
+				example.increment()
+				expect(sentValue) == 1
+				expect(example.counter) == 1
+
+				example.increment()
+				expect(sentValue) == 2
+				expect(example.counter) == 2
+
+				example.reset()
+				expect(sentValue) == 0
+				expect(example.counter) == 0
+			}
+
+			it("should be usable as a property wrapper (2/2)") {
+				let (signal, observer) = Signal<Int, Never>.pipe()
+				let example = Example(observing: SignalProducer(signal.map { $0 * 2 }))
+				var sentValue: Int?
+
+				example.$counter.signal.observeValues { sentValue = $0 }
+				expect(sentValue).to(beNil())
+				expect(example.counter) == 0
+
+				example.increment()
+				expect(sentValue) == 1
+				expect(example.counter) == 1
+
+				observer.send(value: 10)
+				expect(sentValue) == 20
+				expect(example.counter) == 20
+
+				example.increment()
+				expect(sentValue) == 21
+				expect(example.counter) == 21
+			}
+
+			it("should not deadlock, although this example isn't quite all atomic either") {
+				struct Wrapper {
+					@Observable static var string: String = ""
+				}
+				var sentValues: [String] = []
+
+				Wrapper.$string.signal.observeValues { sentValues.append($0) }
+
+				expect(Wrapper.string) == ""
+				expect(sentValues) ==  []
+
+				// This expression locks atomically for `+=`.
+				Wrapper.string += "n"
+				expect(Wrapper.string) == "n"
+				expect(sentValues) ==  ["n"]
+
+				// This expression locks twice, once in the RHS, another time for the `+=`.
+				Wrapper.string += "a" + Wrapper.string
+				expect(Wrapper.string) == "nan"
+				expect(sentValues) ==  ["n", "nan"]
+
+				// This expression locks atomically for `modify`.
+				Wrapper.$string.modify {
+					$0 = $0 + " " + $0
+				}
+				expect(Wrapper.string) == "nan nan"
+				expect(sentValues) ==  ["n", "nan", "nan nan"]
+
+				let oldValue = Wrapper.$string.swap("yeah")
+				expect(oldValue) == "nan nan"
+				expect(Wrapper.string) == "yeah"
+				expect(sentValues) ==  ["n", "nan", "nan nan", "yeah"]
+
+				/// N.B: This OTOH would deadlock:
+				///
+				/// ```
+				/// Wrapper.$string.modify {
+				/// 	$0 = $0 + " " + Wrapper.string
+				/// }
+				/// ```
+			}
+		}
+
 		describe("MutableProperty") {
 			it("should have the value given at initialization") {
 				let mutableProperty = MutableProperty(initialPropertyValue)
